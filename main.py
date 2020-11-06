@@ -1,4 +1,4 @@
 from window import Window
 
-app = Window('proj.csv')
+app = Window('test_file.csv')
 app.mainloop()

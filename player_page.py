@@ -9,7 +9,7 @@ class PlayerPage(tk.Frame):
         tk.Frame.__init__(self, parent)
         #prepares player dataframe used throughout frame
         self.player_master = optimizer.player_master.filter(
-            ['position', 'full_name', 'team', 'salary', 'ppg_projection', 'value']
+            ['position', 'name', 'team', 'salary', 'ppg_projection', 'value']
         )
 
         #declares scrollable frame for excl and lock buttons
@@ -67,10 +67,7 @@ class PlayerPage(tk.Frame):
         e_scroll.grid(row=1, column=1, sticky='nse', padx=(0,10))
         self.excl_text['yscrollcommand'] = e_scroll.set
 
-        #dataframes to be converted to string in toggle functions
-        self.excl_df = pd.DataFrame()
-
-        #adds text bx for locked players
+        #adds text box for locked players
         tk.Label(self, text="Locked:", font=('Calibri', 11)).grid(row=2, column=1, sticky='sw')
         self.lock_text = tk.Text(self, height=10, width=50, state=tk.DISABLED)
         self.lock_text.grid(row=3, column=1, sticky='ns', pady=(0,10), padx=(0,10))
@@ -93,7 +90,7 @@ class PlayerPage(tk.Frame):
             self.lock_buttons[player].configure(state = tk.NORMAL)
             self.excl_df = self.excl_df.drop(player)
 
-        #converts data frame to string and addsto text box
+        #converts data frame to string and adds to text box
         df_text = self.excl_df.to_string(header=False, index=False, justify='right')
         self.excl_text.config(state=tk.NORMAL)
         self.excl_text.delete(1.0, tk.END)
