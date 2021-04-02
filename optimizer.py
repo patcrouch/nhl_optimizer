@@ -13,6 +13,7 @@ class Optimizer:
         self.opp_skaters = self.set_opp_skaters()
         self.num_lineups = num_lineups
         self.n_players = len(self.players.index)
+        self.proj_type = 'proj_FP'
         self.p_vars = {}
         self.t_vars = []
         self.lineups = {}
@@ -30,8 +31,7 @@ class Optimizer:
     #prepares df for program
     def initialize_df(self, file_path):
         df = pd.read_csv(file_path,index_col=False)
-        df['name'] = df['first_name']+' '+df['last_name']
-        df['value'] = round(df['ppg_projection']/df['salary']*1000, 2)
+        df['last_name'] =  df['name'].apply(lambda x: ' '.join(x.split()[1:]))
         df = df.sort_values('last_name')
         df['name'] = df['name'].apply(lambda name: f"{name[:16]:>16}")
         df = df.reset_index(drop=True)
@@ -81,15 +81,18 @@ class Optimizer:
             self.t_vars = [pulp.LpVariable(str(team), cat='Binary') for team in self.teams]   #to be used for team constraints only, not objective
 
             #adds objective function
-            prob += (pulp.lpSum(self.players.loc[p_id, 'ppg_projection']*self.p_vars[p_id] for p_id in self.players['player_id']))
+            prob += (pulp.lpSum(self.players.loc[p_id, self.proj_type]*self.p_vars[p_id] for p_id in self.players['player_id']))
             
             #add player number constraints
             prob += (pulp.lpSum(self.p_vars[p_id] for p_id in self.players['player_id']) == 9)
 
             #add position constraints
-            prob += (pulp.lpSum(self.positions.loc[p_id,'C']*self.p_vars[p_id] for p_id in self.players['player_id']) == 2)
-            prob += (pulp.lpSum(self.positions.loc[p_id,'W']*self.p_vars[p_id] for p_id in self.players['player_id']) == 4)
-            prob += (pulp.lpSum(self.positions.loc[p_id,'D']*self.p_vars[p_id] for p_id in self.players['player_id']) == 2)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'C']*self.p_vars[p_id] for p_id in self.players['player_id']) >= 2)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'C']*self.p_vars[p_id] for p_id in self.players['player_id']) <= 4)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'W']*self.p_vars[p_id] for p_id in self.players['player_id']) >= 2)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'W']*self.p_vars[p_id] for p_id in self.players['player_id']) <= 4)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'D']*self.p_vars[p_id] for p_id in self.players['player_id']) >= 2)
+            prob += (pulp.lpSum(self.positions.loc[p_id,'D']*self.p_vars[p_id] for p_id in self.players['player_id']) <= 4)
             prob += (pulp.lpSum(self.positions.loc[p_id,'G']*self.p_vars[p_id] for p_id in self.players['player_id']) == 1)
 
             for team in self.teams:
@@ -158,8 +161,9 @@ class Optimizer:
         p = list(map(bool, [pulp.value(v) for v in lineup]))
         l = self.players[p]
 
-        #creates new dataframe to simplify lineup for printing
-        player_df = l.filter(['position', 'name', 'team', 'salary', 'ppg_projection', 'value', 'player_id'])
+        #creates new dataframe to simplify lineup for printing, and rounds player projection to one decimal
+        player_df = l.filter(['position', 'name', 'team', 'salary', self.proj_type, 'value', 'player_id'])
+        player_df[self.proj_type] = player_df[self.proj_type].apply(lambda x: round(x,1))
 
         #orders lineup as seen in game
         player_df['position'] = pd.Categorical(player_df['position'], ['C', 'W', 'D', 'G'])
@@ -168,7 +172,8 @@ class Optimizer:
         #resets index to original player id
         player_df = player_df.set_index('player_id')
 
-        points = round(l['ppg_projection'].sum(),1)
+        #calculates total points and salary for a lineup
+        points = round(l[self.proj_type].sum(),1)
         salary = l['salary'].sum()
 
         return {'players':player_df, 'points':points, 'salary':salary}
@@ -188,7 +193,8 @@ class Optimizer:
 
         #creates and orders percentages df
         percentages = self.player_master.filter(p.index, axis = 0)
-        percentages = percentages.filter(['position', 'name', 'team', 'salary', 'ppg_projection' ])
+        percentages = percentages.filter(['position', 'name', 'team', 'salary', self.proj_type])
+        percentages[self.proj_type] = percentages[self.proj_type].apply(lambda x: round(x,1))
         percentages.insert(2, 'percentages', p)
         percentages = percentages.sort_values(by='percentages', ascending=False)
 

@@ -1,4 +1,7 @@
 from window import Window
+import datetime as dt
 
-app = Window('test_file.csv')
+date = dt.date(2021,3,30)
+
+app = Window(f"projections_last30/{date.strftime('%y_%m_%d')}.csv")
 app.mainloop()

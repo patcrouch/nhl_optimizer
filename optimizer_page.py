@@ -8,13 +8,13 @@ class OptimizerPage(tk.Frame):
     '''
     lineup_list_set = {
         'set': {'height':20, 'width':50, 'padx':2, 'pady':2, 'relief':tk.GROOVE, 'bd':2, 'state':tk.DISABLED},
-        'pos': {'row':3, 'column':0, 'columnspan':8, 'pady':10, 'padx':10, 'sticky':'nsew'},
-        'scroll' :{'row':3, 'column':7, 'pady':10, 'padx':10, 'sticky':'nse'} 
+        'pos': {'row':4, 'column':0, 'columnspan':8, 'pady':10, 'padx':10, 'sticky':'nsew'},
+        'scroll' :{'row':4, 'column':7, 'pady':10, 'padx':10, 'sticky':'nse'} 
     }   
     percentages_set = {
         'set': {'height':20, 'width':50, 'padx':2, 'pady':2, 'relief':tk.GROOVE, 'bd':2, 'state':tk.DISABLED},
-        'pos': {'row':3, 'column':8, 'columnspan':8, 'pady':10, 'padx':10, 'sticky':'nsew'},
-        'scroll': {'row':3, 'column':15, 'pady':10, 'padx':10, 'sticky':'nse'}
+        'pos': {'row':4, 'column':8, 'columnspan':8, 'pady':10, 'padx':10, 'sticky':'nsew'},
+        'scroll': {'row':4, 'column':15, 'pady':10, 'padx':10, 'sticky':'nse'}
     }
     team_button_set = {
         'pos': {'padx':5, 'pady':3, 'sticky':'w'}
@@ -31,7 +31,11 @@ class OptimizerPage(tk.Frame):
     }
     o_button_set = {
         'set': {'height':2, 'width':12, 'text':'Optimize', 'bd':2, 'font':('Calibri', 12)},
-        'pos': {'row':2, 'column':2, 'columnspan':4, 'pady':3, 'sticky':'nsew'}
+        'pos': {'row':2, 'column':1, 'columnspan':6, 'pady':3, 'sticky':'nsew'}
+    }
+    radio_button_set = {
+        'set': {'indicatoron':0, 'font':('Calibri', 11)},
+        'pos': {'row':3,'columnspan':2,'stick':'nesw','pady':2}
     }
 
     def __init__(self, optimizer, parent, controller):
@@ -65,6 +69,9 @@ class OptimizerPage(tk.Frame):
                 team_buttons[team].grid(row=0, column=i, **self.team_button_set['pos'])
             else:
                 team_buttons[team].grid(row=1, column=i%16, **self.team_button_set['pos'])
+        if len(team_buttons) < 16:
+            for i in list(range(16)[len(team_buttons):]):
+                self.grid_columnconfigure(i,weight=1)
 
         #Sets entry and slider for number of lineups
         #num_lineups used in optimize function
@@ -84,11 +91,24 @@ class OptimizerPage(tk.Frame):
         #optimize button runs optimizer and outputs lineups in text box
         o_button = tk.Button(self, command=lambda: self.get_lineups(), **self.o_button_set['set'])
         o_button.grid(**self.o_button_set['pos'])
+
+        #radio buttons used to toggle between different projection systems
+        self.fp_type_var = tk.StringVar()
+        self.fp_type_var.set('proj_FP')
+        
+        pers_fp_button = tk.Radiobutton(self,text='Personal',value='proj_FP',command=lambda:self.fp_type_var.get(),variable=self.fp_type_var,**self.radio_button_set['set'])
+        pers_fp_button.grid(column=2, **self.radio_button_set['pos'])
+
+        dff_fp_button = tk.Radiobutton(self,text='DFFuel',value="ppg_projection",command=lambda:self.fp_type_var.get(),variable=self.fp_type_var,**self.radio_button_set['set'])
+        dff_fp_button.grid(column=4, **self.radio_button_set['pos'])
+
         
     #used in optimize button to optimize lineups and put in text box    
     def get_lineups(self):
 
         player_page = self.controller.get_page('Players')
+
+        self.optimizer.proj_type = self.fp_type_var.get()
 
         #sets excluded teams, excl players, and lock players for optimizer
         excl_teams = [team for team in self.team_vars if self.team_vars[team].get() == 0]
